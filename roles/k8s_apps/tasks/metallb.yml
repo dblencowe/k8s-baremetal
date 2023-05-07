@@ -1,0 +1,55 @@
+---
+- name: Add helm repo https://charts.bitnami.com/bitnami
+  become: true
+  become_user: kube
+  kubernetes.core.helm_repository:
+    name: bitnami
+    repo_url: https://charts.bitnami.com/bitnami
+
+- name: Install bitnami/metallb
+  become: true
+  become_user: kube
+  kubernetes.core.helm:
+    name: "metallb"
+    namespace: "{{ core_apps_namespace }}"
+    chart_ref: bitnami/metallb
+    wait: true
+    values:
+      controller:
+        tolerations:
+          - effect: NoSchedule
+            key: node-role.kubernetes.io/master
+          - key: role
+      speaker:
+        tolerations:
+          - effect: NoSchedule
+            key: node-role.kubernetes.io/master
+          - key: role
+
+- name: Get metallb password from secret
+  become: true
+  become_user: kube
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: memberlist
+    namespace: "{{ core_apps_namespace }}"
+  register: metallb_secret
+
+- name: Generate metallb secret
+  become: true
+  become_user: kube
+  become_method: sudo
+  ansible.builtin.command: kubectl create secret generic -n "{{ core_apps_namespace }}" memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+  when: metallb_secret.resources | length <= 0
+  register: output
+  changed_when: output.rc == 0
+
+- name: Configure Network
+  become: true
+  become_user: kube
+  kubernetes.core.k8s:
+    state: present
+    template: metallb-config.yml.j2
+    validate:
+      fail_on_error: true

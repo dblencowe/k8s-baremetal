@@ -1,0 +1,22 @@
+---
+- name: Add helm repo https://kubernetes-sigs.github.io/external-dns/
+  become: true
+  become_user: kube
+  kubernetes.core.helm_repository:
+    name: external-dns
+    repo_url: https://kubernetes-sigs.github.io/external-dns/
+  when: install_external_dns == "true"
+
+- name: Install external-dns/external-dns
+  become: true
+  become_user: kube
+  kubernetes.core.helm:
+    name: "external-dns"
+    namespace: "{{ core_apps_namespace }}"
+    chart_ref: external-dns/external-dns
+    values:
+      provider: "{ external_dns_provider }"
+      registry: "{{ external_dns_registry }}"
+      sources: "{{ external_dns_sources }}"
+      extraArgs: "{{ external_dns_extra_args }}"
+  when: install_external_dns == "true"

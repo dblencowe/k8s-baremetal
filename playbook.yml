@@ -1,0 +1,30 @@
+---
+- name: common
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: configure k8s nodes
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - k8s_node
+
+- name: configure k8s master
+  hosts: k8s_nodes:master
+  become: true
+  roles:
+    - k8s_master
+
+- name: configure k8s workers
+  hosts: k8s_nodes:worker
+  become: true
+  roles:
+    - k8s_worker
+
+- name: configure core applications
+  hosts: k8s_nodes:master
+  become: true
+  roles:
+    - k8s_apps

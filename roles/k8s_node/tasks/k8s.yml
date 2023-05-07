@@ -1,0 +1,42 @@
+---
+- name: Install and configure dependencies
+  ansible.builtin.apt:
+    state: present
+    name: ['apt-transport-https', 'curl']
+
+- name: Add an Apt signing key for k8s
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add kubernetes-xenial repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-{{ ansible_distribution_release }} main"
+    state: present
+    filename: kubernetes.list
+
+- name: Unhold packages
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  with_items: [kubelet, kubeadm, kubectl, cri-tools]
+
+- name: Install Kubernetes
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - "kubelet={{ k8s_packages_version }}"
+      - "kubeadm={{ k8s_packages_version }}"
+      - "kubectl={{ k8s_packages_version }}"
+      - "cri-tools={{ cri_tools_package_version }}"
+    state: present
+  register: k8s_install
+
+- name: Hold k8s packages
+  become: true
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  with_items: [kubelet, kubeadm, kubectl, cri-tools]

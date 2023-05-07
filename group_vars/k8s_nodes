@@ -1,0 +1,19 @@
+---
+k8s_packages_version: 1.22.17-00
+cri_tools_package_version: 1.24.2-00
+
+k8s_cidr: 10.244.0.0/16
+flannel_version: v0.21.4
+
+core_apps_namespace: core
+metallb_cidr: 192.168.1.0/24
+
+install_external_dns: true
+external_dns_provider: pihole
+external_dns_registry: noop
+external_dns_sources:
+    - services
+external_dns_extra_args:
+    - --pihole-server=http://pihole.example.com
+    - --pihole-password=admin
+    - --publish-internal-services

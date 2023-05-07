@@ -1,0 +1,71 @@
+---
+# Add authorised users
+- name: Create authorised user accounts
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    groups: sudo
+    append: true
+    state: present
+    shell: /bin/bash
+    system: false
+    createhome: true
+  with_items: "{{ authorized_users }}"
+
+- name: "Add authorized keys"
+  ansible.posix.authorized_key:
+    user: "{{ item.username }}"
+    key: "{{ item.public_key }}"
+  with_items: "{{ authorized_users }}"
+
+- name: Allow authorised users to use passwordless sudo
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers
+    line: "{{ item }} ALL=(ALL) NOPASSWD: ALL"
+    validate: 'visudo -cf %s'
+  with_items: "{{ authorized_users }}"
+  when:
+    - not item | skipped
+    - item.sudo == "true"
+
+# Set timezone
+- name: Set timezone
+  ansible.builtin.lineinfile:
+    path: /etc/timezone
+    regexp: "^"
+    line: "{{ timezone }}"
+
+- name: Set localtime
+  ansible.builtin.file:
+    src: /usr/share/zoneinfo/{{ timezone }}
+    dest: /etc/localtime
+    state: link
+
+# Set machine hostname
+- name: Set machine hostname
+  become: true
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}.{{ tld }}"
+
+- name: Set machine hostname in /etc/hosts
+  become: true
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: "^127.0.1.1"
+    line: '127.0.0.1 localhost {{ inventory_hostname }}.{{ root_domain }}'
+    state: present
+
+- name: Ensure cloud-init preserves hostname
+  become: true
+  ansible.builtin.lineinfile:
+    dest: /etc/cloud/cloud.cfg
+    regexp: '^preserve_hostname:'
+    line: 'preserve_hostname: true'
+    state: present
+
+- name: Disable host management
+  become: true
+  ansible.builtin.lineinfile:
+    dest: /etc/cloud/cloud.cfg
+    line: 'manage_etc_hosts: false'
+    state: present
+  notify: Reboot

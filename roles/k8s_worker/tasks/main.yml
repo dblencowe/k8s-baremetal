@@ -1,0 +1,14 @@
+---
+- name: Copy join command from Ansiblehost to the worker nodes.
+  become: true
+  command.builtin.copy:
+    src: /tmp/kubernetes_join_command
+    dest: /tmp/kubernetes_join_command
+    mode: "0777"
+
+- name: Join the Worker nodes to the cluster.
+  become: true
+  command.builtin.shell: sh /tmp/kubernetes_join_command && touch /var/lib/provisioning/cluster_joined.txt
+  register: joined_or_not
+  args:
+    creates: /var/lib/provisioning/cluster_joined.txt

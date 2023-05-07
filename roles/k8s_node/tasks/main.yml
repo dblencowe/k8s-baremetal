@@ -1,0 +1,76 @@
+---
+- name: Apply RaspberryPi cgroups
+  ansible.builtin.include_tasks: rpi.yml
+
+- name: Create provisioning folder
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/provisioning
+    state: directory
+    mode: "0755"
+
+- name: Create containerd config file
+  ansible.builtin.file:
+    path: "/etc/modules-load.d/containerd.conf"
+    state: "touch"
+    mode: "0755"
+
+- name: Add module conf for containerd
+  ansible.builtin.blockinfile:
+    path: "/etc/modules-load.d/containerd.conf"
+    block: |
+          overlay
+          br_netfilter
+
+- name: Load required modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items: [overlay, br_netfilter]
+
+- name: Set system configuration for Kubernetes networking
+  ansible.builtin.file:
+    path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+    state: "touch"
+    mode: "0755"
+
+- name: Add conf for containerd
+  ansible.builtin.blockinfile:
+    path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+    block: |
+          net.bridge.bridge-nf-call-iptables = 1
+          net.ipv4.ip_forward = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+  notify: Sysctl apply
+
+- name: Install containerd
+  ansible.builtin.apt:
+    name: containerd
+    state: present
+
+- name: Create directory to store containerd config
+  ansible.builtin.file:
+    state: directory
+    path: /etc/containerd
+    mode: "0755"
+
+- name: Create containerd configuration
+  ansible.builtin.template:
+    src: containerd-config.toml.j2
+    dest: /etc/containerd/config.toml
+    mode: "0755"
+  notify: Containerd restart
+
+- name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
+  ansible.builtin.command: swapoff -a
+  register: output
+  changed_when: output.rc == 0
+
+- name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
+- name: Install k8s
+  ansible.builtin.include_tasks: k8s.yml

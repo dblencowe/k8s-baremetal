@@ -1,0 +1,21 @@
+---
+- name: Create namespace used to contain core applications
+  become: true
+  become_user: kube
+  kubernetes.core.k8s:
+    state: present
+    template: namespace.yml.j2
+    validate:
+      fail_on_error: true
+  vars:
+    namespace: "{{ core_apps_namespace }}"
+
+- name: Install MetalLB
+  ansible.builtin.include_tasks: metallb.yml
+
+- name: Install Longhorn CSI
+  ansible.builtin.include_tasks: longhorn.yml
+
+- name: Install external-dns
+  ansible.builtin.include_tasks: external-dns.yml
+  when: install_external_dns == "true"
