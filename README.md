@@ -10,4 +10,5 @@ The playbook accomplishes several basic tasks for setting up a Cluster:
 - Install Core Applications
 - - MetalLB - Service / LoadBalancer external IP provisioning
 - - Longhorn - synchronised file storage on nodes
+- - nfs-subdir-external-provisioner - provsion storage on a remote nfs server
 - - External DNS (optional) - Publish DNS records for external services

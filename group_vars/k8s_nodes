@@ -17,3 +17,7 @@ external_dns_extra_args:
     - --pihole-server=http://pihole.example.com
     - --pihole-password=admin
     - --publish-internal-services
+
+install_nfs_provisioner: false
+nfs_provisioner_server:
+nfs_provisioner_path:

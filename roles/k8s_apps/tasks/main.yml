@@ -19,3 +19,7 @@
 - name: Install external-dns
   ansible.builtin.include_tasks: external-dns.yml
   when: install_external_dns == "true"
+
+- name: Install nfs-subdir-external-provisioner
+  ansible.builtin.include_tasks: nfs-provisioner.yml
+  when: install_nfs_provisioner == "true"
